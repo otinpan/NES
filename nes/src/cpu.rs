@@ -55,7 +55,7 @@ pub enum AddressingMode{
     NoneAddressing,
 }
 
-trait Mem{
+pub trait Mem{
     fn mem_read(&self,addr:u16)->u8;
 
     fn mem_write(&mut self,addr:u16,data:u8);
@@ -540,7 +540,7 @@ impl CPU{
         let old_carry=self.status.contains(CpuFlags::CARRY);
 
         self.status.set(CpuFlags::CARRY,data&0b1000_0000!=0);
-        data<<1;
+        data=data<<1;
         if old_carry{
             data = data | 0b0000_0001;
         }
@@ -552,7 +552,7 @@ impl CPU{
         let mut data=self.mem_read(addr);
         let old_carry=self.status.contains(CpuFlags::CARRY);
         self.status.set(CpuFlags::CARRY,data&0b1000_0000!=0);
-        data<<1;
+        data=data<<1;
         if old_carry{
             data = data | 0b0000_0001;
         }
@@ -703,8 +703,8 @@ impl CPU{
     }
 
     pub fn load(&mut self,program: Vec<u8>){
-        self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xFFFC,0x8000);
+        self.memory[0x0600 .. (0x0600 + program.len())].copy_from_slice(&program[..]);
+        self.mem_write_u16(0xFFFC,0x0600);
     }
 
     pub fn reset(&mut self){
@@ -716,7 +716,14 @@ impl CPU{
 
         self.program_counter=self.mem_read_u16(0xFFFC);
     }
-    pub fn run(&mut self) {
+    pub fn run(&mut self){
+        self.run_with_callback(|_|{});
+    }
+
+    pub fn run_with_callback<F>(&mut self,mut callback: F)
+        where 
+            F:FnMut(&mut CPU),
+    {
         let ref opcodes: HashMap<u8, &'static opcodes::OpCode> = *opcodes::OPCODES_MAP;
 
         loop {
@@ -965,6 +972,8 @@ impl CPU{
             if program_counter_state == self.program_counter {
                 self.program_counter += (opcode.len - 1) as u16;
             }
+
+            callback(self);
         }
     }
 }
