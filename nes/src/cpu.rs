@@ -782,6 +782,9 @@ impl CPU{
                 // BVC
                 0x50 => self.bvc(),
 
+                // BVS
+                0x70 => self.bvs(),
+
                 // CLC
                 0x18 => self.clc(),
 
@@ -875,7 +878,9 @@ impl CPU{
                 }
 
                 // LSR
-                0x4a | 0x46 | 0x56 | 0x4e | 0x5e =>{
+                0x4a => self.lsr_accumulator(),
+
+                0x46 | 0x56 | 0x4e | 0x5e =>{
                     self.lsr(&opcode.mode);
                 }
 
@@ -891,6 +896,9 @@ impl CPU{
 
                 // PHA
                 0x48 => self.pha(),
+
+                // PHP
+                0x08 => self.php(),
 
                 // PLA
                 0x68 => self.pla(),
@@ -1030,6 +1038,41 @@ mod test {
         cpu.load_and_run(vec![0xa5, 0x10, 0x00]);
 
         assert_eq!(cpu.register_a, 0x55);
+    }
+
+    #[test]
+    fn test_0x4a_lsr_accumulator() {
+        let mut cpu = CPU::new();
+
+        cpu.load_and_run(vec![0xa9, 0x02, 0x4a, 0x00]);
+
+        assert_eq!(cpu.register_a, 0x01);
+        assert!(!cpu.status.contains(CpuFlags::CARRY));
+    }
+
+    #[test]
+    fn test_0x08_php_pushes_status_to_stack() {
+        let mut cpu = CPU::new();
+        cpu.status.insert(CpuFlags::CARRY);
+        let expected = (cpu.status | CpuFlags::BREAK | CpuFlags::BREAK2).bits();
+
+        cpu.load_and_run(vec![0x08, 0x00]);
+
+        assert_eq!(cpu.stack_pointer, STACK_RESET.wrapping_sub(1));
+        assert_eq!(
+            cpu.mem_read((STACK as u16) + STACK_RESET as u16),
+            expected
+        );
+    }
+
+    #[test]
+    fn test_0x70_bvs_branch_taken() {
+        let mut cpu = CPU::new();
+        cpu.status.insert(CpuFlags::OVERFLOW);
+
+        cpu.load_and_run(vec![0x70, 0x02, 0xa9, 0x01, 0xa9, 0x05, 0x00]);
+
+        assert_eq!(cpu.register_a, 0x05);
     }
 
 // @trace-pilot a1e3416f02c5121a2e205c78e8e2e8bc862c29cf
