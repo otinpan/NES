@@ -1,0 +1,1 @@
+(Aの符号 == dataの符号) AND (Aの符号 != resultの符号)
