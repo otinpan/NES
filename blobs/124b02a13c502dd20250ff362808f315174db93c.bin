@@ -1,0 +1,2 @@
+Aとdataが同じ符号で、
+resultだけ符号が変わったら Overflow = 1
