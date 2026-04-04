@@ -1,0 +1,1 @@
+Add an idle state function or improve the CPU idle handling in the NES emulator's cpu.rs file.
