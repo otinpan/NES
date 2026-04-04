@@ -1,0 +1,2 @@
+(data ^ result) & (result ^ self.register_a) & 0x80 != 0
+これは何をしていますか
