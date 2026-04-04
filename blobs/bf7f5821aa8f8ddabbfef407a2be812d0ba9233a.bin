@@ -1,0 +1,14 @@
+===================================================================
+--- cpu.rs (before)	snapshot
++++ cpu.rs (after)	idle
+@@ -1043,9 +1043,9 @@
+         assert_eq!(cpu.mem_read(0x0200), 0x03);
+         assert_eq!(cpu.mem_read(0x0201), 0x03);
+     }
+ 
+-        #[test]
++    #[test]
+     fn test_stack_roundtrip_loop_with_absolute_y_store() {
+         let mut cpu = CPU::new();
+ 
+         cpu.load_and_run(vec![
