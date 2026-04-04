@@ -1,0 +1,20 @@
+===================================================================
+--- cpu.rs (before)	snapshot
++++ cpu.rs (after)	idle
+@@ -1056,14 +1056,14 @@
+             0x48,             // PHA
+             0xe8,             // INX
+             0xc8,             // INY
+             0xc0, 0x10,       // CPY #$10
+-            0xd0, 0xf6,       // BNE firstloop
++            0xd0, 0xf5,       // BNE firstloop
+             0x68,             // secondloop: PLA
+             0x99, 0x00, 0x02, // STA $0200,Y
+             0xc8,             // INY
+             0xc0, 0x20,       // CPY #$20
+-            0xd0, 0xf8,       // BNE secondloop
++            0xd0, 0xf7,       // BNE secondloop
+             0x00,             // BRK
+         ]);
+ 
+         for i in 0..0x10 {
