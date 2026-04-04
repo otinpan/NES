@@ -1,0 +1,1 @@
+Add a test case to the NES CPU emulator that runs a loop using absolute Y addressing for STA and verifies stack push/pop behavior with PHA and PLA instructions.
