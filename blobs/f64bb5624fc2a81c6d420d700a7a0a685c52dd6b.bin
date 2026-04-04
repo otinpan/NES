@@ -1,0 +1,90 @@
+ここが一番“6502っぽい”難所ですね 👍
+結論からいくと👇
+
+🎯 何をしている式か
+Rust(data ^ result) & (result ^ self.register_a) & 0x80 != 0
+👉 これは
+Overflow（Vフラグ）が立つかどうかを判定している
+
+🧠 Overflowの本質
+6502のOverflowは：
+同じ符号同士の加算で、結果の符号が変わったら1
+
+例
+  0100_0000 (64)+ 0100_0000 (64)------------  1000_0000 (-128) ← 符号変わった
+👉 Overflow = 1
+
+🔍 式を分解する
+Rust(data ^ result)
+👉 data と result の符号が違うかチェック
+
+Rust(result ^ self.register_a)
+👉 A と result の符号が違うかチェック
+
+💡 XORの意味
+XOR（^）は：
+同じ → 0違う → 1
+
+🔥 なぜこの2つをANDするのか？
+Rust(data ^ result) & (result ^ self.register_a)
+👉 意味：
+両方とも「符号が変わった」場合だけ1
+つまり：
+Aとdataは同符号だったのにresultだけ違う符号になった
+👉 これがOverflow
+
+🧠 最後の & 0x80
+Rust& 0x80
+👉 これは
+符号ビット（7bit目）だけを見る
+
+🎯 全体まとめ
+Rust(data ^ result) & (result ^ self.register_a) & 0x80 != 0
+👉 意味：
+Aとdataが同じ符号で、resultだけ符号が変わったら Overflow = 1
+
+🧪 具体例で確認
+Overflowするケース
+A      = 0x50 (0101_0000) 正data   = 0x50 (0101_0000) 正result = 0xA0 (1010_0000) 負
+計算：
+data ^ result        = 1111_0000result ^ A           = 1111_0000AND                  = 1111_0000& 0x80               = 1000_0000 ≠ 0 → true
+👉 Overflow = 1 ✅
+
+Overflowしないケース
+A      = 0x50data   = 0x10result = 0x60
+全部正なので：
+符号変わってない → Overflow = 0
+
+🔥 なぜこの式になるのか（直感）
+Overflow条件：
+(Aの符号 == dataの符号) AND (Aの符号 != resultの符号)
+これをビット演算にしたのがこれ👇
+Rust(data ^ result) & (result ^ self.register_a) & 0x80
+
+🎯 まとめ
+
+
+XOR → 符号が変わったか検出
+
+
+AND → 両方条件満たすときだけ
+
+
+0x80 → 符号ビットだけ見る
+
+
+最終的に → Overflow判定
+
+
+
+🚀 次に進むなら
+ここ理解できたらかなり強いです👇
+
+
+なぜ !(A ^ data) & (A ^ result) でも書けるのか
+
+
+SBCでこの式がそのまま使える理由
+
+
+やるとCPU設計レベルの理解になります🔥
