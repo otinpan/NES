@@ -1,0 +1,1 @@
+Write a unit test for the CPU emulator in Rust that demonstrates a loop using the DEX instruction with CPX and BNE to count down from 8 to 3, storing the X register to memory before and after the loop, and verify the memory and register contents after the loop completes.
