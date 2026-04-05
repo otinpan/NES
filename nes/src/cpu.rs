@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::opcodes;
+use crate::bus::Bus;
 
 bitflags! {
     /// # Status Register (P) http://wiki.nesdev.com/w/index.php/Status_flags
@@ -36,7 +37,7 @@ pub struct CPU{
     pub status: CpuFlags,
     pub program_counter: u16,
     pub stack_pointer: u8,
-    memory: [u8;0xFFFF]
+    pub bus: Bus,
 }
 
 
@@ -76,17 +77,25 @@ pub trait Mem{
 
 impl Mem for CPU{
     fn mem_read(&self,addr:u16)->u8{
-        self.memory[addr as usize]
+        self.bus.mem_read(addr)
     }
 
     fn mem_write(&mut self,addr:u16,data:u8){
-        self.memory[addr as usize] = data;
+        self.bus.mem_write(addr,data);
+    }
+
+    fn mem_read_u16(&self, pos:u16) -> u16{
+        self.bus.mem_read_u16(pos)
+    }
+
+    fn mem_write_u16(&mut self,pos:u16,data:u16){
+        self.bus.mem_write_u16(pos,data);
     }
 
 }
 
 impl CPU{
-    pub fn new()->Self{
+    pub fn new(bus: Bus)->Self{
         CPU{
             register_a: 0,
             register_x: 0,
@@ -94,7 +103,7 @@ impl CPU{
             status:CpuFlags::from_bits_truncate(0b100100),
             program_counter: 0,
             stack_pointer: STACK_RESET,
-            memory: [0;0xFFFF]
+            bus: bus,
         }
     }
 
@@ -703,8 +712,10 @@ impl CPU{
     }
 
     pub fn load(&mut self,program: Vec<u8>){
-        self.memory[0x0600 .. (0x0600 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xFFFC,0x0600);
+        for i in 0 ..(program.len() as u16){
+            self.mem_write(0x0000 + i,program[i as usize]);
+        }
+        self.mem_write_u16(0xFFFC,0x0000);
     }
 
     pub fn reset(&mut self){
@@ -992,7 +1003,8 @@ mod test {
 
     #[test]
     fn test_0xa9_lda_immediate_load_data() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
 
@@ -1003,7 +1015,8 @@ mod test {
 
     #[test]
     fn test_0xaa_tax_move_a_to_x() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
         cpu.register_a = 10;
 
         cpu.load_and_run(vec![0xaa, 0x00]);
@@ -1013,7 +1026,8 @@ mod test {
 
     #[test]
     fn test_5_ops_working_together() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
 
@@ -1022,7 +1036,8 @@ mod test {
 
     #[test]
     fn test_inx_overflow() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
         cpu.register_x = 0xff;
 
         cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
@@ -1032,7 +1047,8 @@ mod test {
 
     #[test]
     fn test_lda_from_memory() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
         cpu.mem_write(0x10, 0x55);
 
         cpu.load_and_run(vec![0xa5, 0x10, 0x00]);
@@ -1042,7 +1058,8 @@ mod test {
 
     #[test]
     fn test_0x4a_lsr_accumulator() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0x02, 0x4a, 0x00]);
 
@@ -1052,7 +1069,8 @@ mod test {
 
     #[test]
     fn test_0x08_php_pushes_status_to_stack() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
         cpu.status.insert(CpuFlags::CARRY);
         let expected = (cpu.status | CpuFlags::BREAK | CpuFlags::BREAK2).bits();
 
@@ -1067,7 +1085,8 @@ mod test {
 
     #[test]
     fn test_0x70_bvs_branch_taken() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
         cpu.status.insert(CpuFlags::OVERFLOW);
 
         cpu.load_and_run(vec![0x70, 0x02, 0xa9, 0x01, 0xa9, 0x05, 0x00]);
@@ -1078,7 +1097,8 @@ mod test {
 // @trace-pilot a1e3416f02c5121a2e205c78e8e2e8bc862c29cf
     #[test]
     fn test_dex_loop_with_cpx_and_bne() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
 
 // @trace-pilot a1e3416f02c5121a2e205c78e8e2e8bc862c29cf
         cpu.load_and_run(vec![
@@ -1099,7 +1119,8 @@ mod test {
 // @trace-pilot cb666341ff39b91336b8a3d746e528a20513f7db
     #[test]
     fn test_stack_roundtrip_loop_with_absolute_y_store() {
-        let mut cpu = CPU::new();
+        let bus=Bus::new();
+        let mut cpu = CPU::new(bus);
 
 // @trace-pilot cb666341ff39b91336b8a3d746e528a20513f7db
         cpu.load_and_run(vec![
