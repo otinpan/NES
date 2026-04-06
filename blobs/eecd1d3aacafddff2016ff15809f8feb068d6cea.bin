@@ -1,0 +1,1 @@
+let name_table = vram_index / 0x400;
