@@ -1,0 +1,1 @@
+pub fn mirror_vram_addr(&self, addr: u16) -> u16
