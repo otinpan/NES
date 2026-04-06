@@ -1,0 +1,2 @@
+(Mirroring::Vertical, 2) | (Mirroring::Vertical, 3)
+    => vram_index - 0x800
