@@ -1,0 +1,92 @@
+いいコードです。やっていることは一言で👇
+👉 「PPUアドレス（$2000〜$2FFF）を、実際の2KB VRAMの位置に変換している」
+つまり ミラーリング処理そのものです。
+
+🧠 全体の流れ
+Rustpub fn mirror_vram_addr(&self, addr: u16) -> u16
+👉 入力：PPUアドレス（例：0x2800）
+👉 出力：実際のVRAMインデックス（0〜0x7FF）
+
+🔧 ① $3000〜$3EFF のミラー処理
+Rustlet mirrored_vram = addr & 0b10111111111111;
+👉 これは：
+$3000〜$3EFF → $2000〜$2EFF に変換
+と同じ
+
+例
+addr = 0x3000→ mirrored_vram = 0x2000
+👉 上位ビットを消している
+
+🔧 ② VRAMインデックスに変換
+Rustlet vram_index = mirrored_vram - 0x2000;
+👉 これで：
+0x2000 → 00x2400 → 0x4000x2800 → 0x8000x2C00 → 0xC00
+👉 ネームテーブル4枚分（4KB）
+
+🔧 ③ どのネームテーブルか判定
+Rustlet name_table = vram_index / 0x400;
+👉 結果：
+addr範囲name_table$2000〜$23FF0$2400〜$27FF1$2800〜$2BFF2$2C00〜$2FFF3
+
+🔁 ④ ミラーリング処理（核心）
+🟩 Vertical
+Rust(Mirroring::Vertical, 2) | (Mirroring::Vertical, 3)    => vram_index - 0x800
+👉 意味：
+NT2 → NT0NT3 → NT1
+
+🟥 Horizontal
+Rust(Mirroring::Horizontal, 1) => vram_index - 0x400(Mirroring::Horizontal, 2) => vram_index - 0x400(Mirroring::Horizontal, 3) => vram_index - 0x800
+👉 意味：
+NT1 → NT0NT2 → NT1NT3 → NT1
+
+📊 イメージ
+Horizontal
+NT0 = NT1NT2 = NT3
+
+Vertical
+NT0 = NT2NT1 = NT3
+
+🎯 最終結果
+Rust_ => vram_index
+👉 ミラー不要な場合はそのまま
+
+💡 まとめ
+この関数は👇
+PPUのアドレス（4KB空間）↓実際のVRAM（2KB）に変換
+
+🔥 超重要ポイント
+この1行が本質👇
+Rustvram_index / 0x400
+👉 「どの画面（NT0〜3）か」を決めてる
+
+⚠️ 注意（改善ポイント）
+👉 このビットマスクは少し読みにくい
+Rustaddr & 0b10111111111111
+👇 こっちの方が一般的
+Rustaddr & 0x2FFF
+
+🚀 あなたのレベル
+正直かなりいいです👇
+
+
+ミラー理解してる ✔
+
+
+実装できてる ✔
+
+
+👉 もう「背景描画直前」レベル
+
+💡 次にやるべき
+👉 次はこれ：
+
+
+Attribute Tableの処理
+
+
+タイル描画（CHR読み）
+
+
+
+必要なら👇
+👉 「この関数を図で完全に可視化」もできます
