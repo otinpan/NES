@@ -148,11 +148,15 @@ impl PPU for NesPPU{
             }
             _ => panic!("unexpected access to mirrored space {}",addr),
         }
+        // @trace-pilot ce4fccd0b1086b3af0cd2a3b3bf74a0d7b8e0cbc
+        // it will cause graphical glitches
         self.increment_vram_addr();
     }
 
     fn read_data(&mut self)->u8{
         let addr=self.addr.get();
+        // @trace-pilot ce4fccd0b1086b3af0cd2a3b3bf74a0d7b8e0cbc
+        // it will cause graphical glitches
         self.increment_vram_addr();
 
         match addr{
