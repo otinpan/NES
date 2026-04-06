@@ -30,7 +30,7 @@ bitflags! {
         const NOTUSED5         = 0b00010000;
         const SPRITE_OVERFLOW  = 0b00100000;
         const SPRITE_ZERO_HIT  = 0b01000000;
-        const VBLANK_STARTED   = 0b10000000;
+        const VBLANK_STARTED   = 0b10000000; // flag ppu is working
     }
 }
 
@@ -56,6 +56,10 @@ impl StatusRegister{
     }
 
     pub fn get_vblank_status(&self)->bool{
+        self.contains(StatusRegister::VBLANK_STARTED)
+    }
+
+    pub fn is_in_vblank(&self) -> bool{
         self.contains(StatusRegister::VBLANK_STARTED)
     }
 
