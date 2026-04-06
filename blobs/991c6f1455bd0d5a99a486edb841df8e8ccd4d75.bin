@@ -1,0 +1,1 @@
+v: During rendering, used for the scroll position. Outside of rendering, used as the current VRAM address.
