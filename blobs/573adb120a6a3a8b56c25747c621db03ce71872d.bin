@@ -1,0 +1,1 @@
+let mirrored_vram = addr & 0b10111111111111;
