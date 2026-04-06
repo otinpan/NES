@@ -3,6 +3,7 @@ pub mod opcodes;
 pub mod bus;
 pub mod cartridge;
 pub mod trace;
+pub mod ppu;
 
 use cpu::Mem;
 use cartridge::Rom;
@@ -37,7 +38,7 @@ fn color(byte: u8) -> Color {
     }
 }
 
-fn read_screen_state(cpu: &CPU,frame: &mut [u8; 32*3*32]) -> bool{
+fn read_screen_state(cpu: &mut CPU,frame: &mut [u8; 32*3*32]) -> bool{
     let mut frame_idx=0;
     let mut update=false;
     for i in 0x0200..0x0600{
@@ -102,6 +103,7 @@ fn main() {
     let bus=Bus::new(rom);
     let mut cpu = CPU::new(bus);
     cpu.reset();
+    cpu.program_counter=0xC000;
 
     let mut screen_state = [0 as u8; 32 * 3 * 32];
     let mut rng = rand::thread_rng();
