@@ -1,0 +1,2 @@
+addr = 0x3000
+→ mirrored_vram = 0x2000
