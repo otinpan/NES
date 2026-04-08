@@ -3,6 +3,10 @@ name = "nes"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "tiles_viewer"
+path = "src/tiles_viewer.rs"
+
 [dependencies]
 lazy_static="1.4.0"
 bitflags = "1.2.1"
