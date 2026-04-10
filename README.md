@@ -65,17 +65,26 @@ VRAM[0x2001]=0x03
 ...
 VRAM[0x23fb]=0x08
 ```
-次に、4x4のタイル集合を1つのブロックとして、各ブロックにはどの色を使用するかをpallete tableのアドレスから指定する
+次に、4x4のタイル集合を1つのブロックとする。さらにその中に入った16個のタイルを2x2で分割した4つのタイルの集合をmeta-tilesという。attribute tableには2x2のmeta-tilesにどのpallete tableが使われるかを指定する。これは{00,01,10,11}の4パターンある。1ブロックには4つのmeta-tilesが含まれるため、ちょうど4つのmeta-tilesにどのpallete tableが使用されるかを設定できる。  
+pallete tableはbackgroundとspritesの2種類あり、それぞれ4個設定できる。1つのpallete tableには4つの色を設定できる。そのため
 ```
-VRAM[0x23fc] (attribute table)=0x3f02 (pallete table)
-VRAM[0x23fd]=0x3f10
+VRAM[0x23fc] (attribute table)=0b10_01_11_00
+VRAM[0x23fd]=0b11_11_10_11
 ...
-VRAM[0x2fff]=0x3f2a
+VRAM[0x2fff]=0b00_01_10_10
 ```
+と書いた場合、
+```
+blocks[0][0]=pallete_table[background][2]
+blocks[0][1]=pallete_table[background][1]
+...
+blocks[959][3]=pallete_table[background][2]
+```
+といったように、pallete_tableを指定できる。  
+
 各pallete tableには4つの色までしか設定できない。$0x000から$0x1fffには8x8ピクセルの各ピクセルがどの色を持っているか記述されている。これは2bitであり、4種類の色から選ぶということ。
 ```
 VRAM[0x000]=01
 VRAM[0x001]=11
 ...
 ```
-

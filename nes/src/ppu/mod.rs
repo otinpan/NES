@@ -20,7 +20,7 @@ pub struct NesPPU{
     pub vram: [u8;2048], // 2KB
 
     pub oam_addr: u8,
-    pub oam_data: [u8;256],
+    pub oam_data: [u8;256], // sprite
     pub palette_table:[u8;32],
 
     // ppuデータ保存レジスタ

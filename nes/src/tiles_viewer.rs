@@ -4,7 +4,7 @@ pub mod render;
 
 use cartridge::Rom;
 use render::frame::Frame;
-use render::pallete;
+use render::palette;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -32,10 +32,10 @@ fn show_tile(chr_rom: &[u8], bank: usize, tile_n: usize) -> Frame {
             upper >>= 1;
             lower >>= 1;
             let rgb = match value {
-                0 => pallete::SYSTEM_PALLETE[0x01],
-                1 => pallete::SYSTEM_PALLETE[0x23],
-                2 => pallete::SYSTEM_PALLETE[0x27],
-                3 => pallete::SYSTEM_PALLETE[0x30],
+                0 => palette::SYSTEM_PALETTE[0x01],
+                1 => palette::SYSTEM_PALETTE[0x23],
+                2 => palette::SYSTEM_PALETTE[0x27],
+                3 => palette::SYSTEM_PALETTE[0x30],
                 _ => panic!("out of range pallete table"),
             };
             frame.set_pixel(x, y, rgb);
@@ -68,10 +68,10 @@ fn show_tile_bank(chr_rom: &[u8], bank: usize) -> Frame {
                 upper >>= 1;
                 lower >>= 1;
                 let rgb = match value {
-                    0 => pallete::SYSTEM_PALLETE[0x01],
-                    1 => pallete::SYSTEM_PALLETE[0x23],
-                    2 => pallete::SYSTEM_PALLETE[0x27],
-                    3 => pallete::SYSTEM_PALLETE[0x30],
+                    0 => palette::SYSTEM_PALETTE[0x01],
+                    1 => palette::SYSTEM_PALETTE[0x23],
+                    2 => palette::SYSTEM_PALETTE[0x27],
+                    3 => palette::SYSTEM_PALETTE[0x30],
                     _ => panic!("out of range pallete table"),
                 };
                 frame.set_pixel(tile_x + x, tile_y + y, rgb);
