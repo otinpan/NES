@@ -88,3 +88,14 @@ VRAM[0x000]=01
 VRAM[0x001]=11
 ...
 ```
+spriteの場合も同様に描画していく。backgroundの場合はどの画像を使用するか、どのpalette_tableを使用するかといったデータはvramに入っていた。spriteの場合はoam_dataに各画像に4bytesのデータが入っている。
+* byte0: y座標
+* byte1: chr_romのspriteのアドレス
+* byte2: attributes
+    - 00,01: {00,01,10,11}のどれか。palette table[sprite]
+    - 05: 優先度 (背景の後ろか前か)
+    - 06: 水平反転
+    - 07: 垂直反転
+* byte3: x座標
+
+描画するときは、palette tableをoam_data[i][byte2]から指定して、chr_rom[oam_data[i][byte1]]からどの色を使うかを持ってくるだけ。
