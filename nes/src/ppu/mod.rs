@@ -183,13 +183,16 @@ impl PPU for NesPPU{
             0x2000..=0x2fff =>{
                 self.vram[self.mirror_vram_addr(addr) as usize]=value;
             }
+            // @trace-pilot 275adc42cf1e5107091dee0fd36c6b1438d86149
             0x3000..=0x3eff => unimplemented!("addr {} should not be used in reallity",addr),
 
             0x3f10 | 0x3f14 | 0x3f18 | 0x3f1c =>{
                 let add_mirror=addr-0x10;
+            // @trace-pilot 275adc42cf1e5107091dee0fd36c6b1438d86149
                 self.palette_table[(add_mirror - 0x3f00) as usize]=value;
             }
             0x3f00..=0x3fff=>{
+            // @trace-pilot 275adc42cf1e5107091dee0fd36c6b1438d86149
                 self.palette_table[(addr-0x3f00) as usize]=value;
             }
             _ => panic!("unexpected access to mirrored space {}",addr),
@@ -217,13 +220,16 @@ impl PPU for NesPPU{
                 result
             }
             0x3000..=0x3eff=>{
+            // @trace-pilot 275adc42cf1e5107091dee0fd36c6b1438d86149
                 unimplemented!("addr {} should not used in reallity",addr);
             }
             0x3f10 | 0x3f14 | 0x3f18 | 0x3f1c =>{
                 let add_mirror=addr-0x10;
+            // @trace-pilot 275adc42cf1e5107091dee0fd36c6b1438d86149
                 self.palette_table[(add_mirror - 0x3f00) as usize]
             }
             0x3f00..0x3fff=>{
+            // @trace-pilot 275adc42cf1e5107091dee0fd36c6b1438d86149
                 self.palette_table[(addr-0x3f00) as usize]
             }
             _ =>panic!("unexpected access to mirrored space {}",addr),

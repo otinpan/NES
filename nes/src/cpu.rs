@@ -30,14 +30,14 @@ bitflags! {
 const STACK: u16=0x0100;
 const STACK_RESET:u8=0xfd;
 
-pub struct CPU{
+pub struct CPU<'a>{
     pub register_a: u8,
     pub register_x: u8,
     pub register_y: u8,
     pub status: CpuFlags,
     pub program_counter: u16,
     pub stack_pointer: u8,
-    pub bus: Bus,
+    pub bus: Bus<'a>,
 }
 
 
@@ -75,7 +75,7 @@ pub trait Mem{
     }
 }
 
-impl Mem for CPU{
+impl Mem for CPU<'_>{
     fn mem_read(&mut self,addr:u16)->u8{
         self.bus.mem_read(addr)
     }
@@ -119,8 +119,8 @@ mod interrupt{
     };
 }
 
-impl CPU{
-    pub fn new(bus: Bus)->Self{
+impl<'a> CPU<'a>{
+    pub fn new<'b>(bus: Bus<'b>)->CPU<'b>{
         CPU{
             register_a: 0,
             register_x: 0,
@@ -1030,6 +1030,8 @@ impl CPU{
                 _ => todo!(),
             }
 
+            self.bus.tick(opcode.cycles);
+
             if program_counter_state == self.program_counter {
                 self.program_counter += (opcode.len - 1) as u16;
             }
@@ -1041,10 +1043,11 @@ impl CPU{
 mod test {
     use super::*;
     use crate::cartridge::test;
+    use crate::ppu::NesPPU;
 
     #[test]
     fn test_0xa9_lda_immediate_load_data() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]), |ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
@@ -1056,7 +1059,7 @@ mod test {
 
     #[test]
     fn test_0xaa_tax_move_a_to_x() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]), |ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
         cpu.register_a = 10;
 
@@ -1067,7 +1070,7 @@ mod test {
 
     #[test]
     fn test_5_ops_working_together() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]),|ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
@@ -1077,7 +1080,7 @@ mod test {
 
     #[test]
     fn test_inx_overflow() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]),|ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
         cpu.register_x = 0xff;
 
@@ -1088,7 +1091,7 @@ mod test {
 
     #[test]
     fn test_lda_from_memory() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]),|ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
         cpu.mem_write(0x10, 0x55);
 
@@ -1099,7 +1102,7 @@ mod test {
 
     #[test]
     fn test_0x4a_lsr_accumulator() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]),|ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0x02, 0x4a, 0x00]);
@@ -1110,7 +1113,7 @@ mod test {
 
     #[test]
     fn test_0x08_php_pushes_status_to_stack() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]),|ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
         cpu.status.insert(CpuFlags::CARRY);
         let expected = (cpu.status | CpuFlags::BREAK | CpuFlags::BREAK2).bits();
@@ -1126,7 +1129,7 @@ mod test {
 
     #[test]
     fn test_0x70_bvs_branch_taken() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]),|ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
         cpu.status.insert(CpuFlags::OVERFLOW);
 
@@ -1138,7 +1141,7 @@ mod test {
 // @trace-pilot a1e3416f02c5121a2e205c78e8e2e8bc862c29cf
     #[test]
     fn test_dex_loop_with_cpx_and_bne() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]),|ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
 
 // @trace-pilot a1e3416f02c5121a2e205c78e8e2e8bc862c29cf
@@ -1160,7 +1163,7 @@ mod test {
 // @trace-pilot cb666341ff39b91336b8a3d746e528a20513f7db
     #[test]
     fn test_stack_roundtrip_loop_with_absolute_y_store() {
-        let bus=Bus::new(test::test_rom(vec![]));
+        let bus=Bus::new(test::test_rom(vec![]),|ppu: &NesPPU|{});
         let mut cpu = CPU::new(bus);
 
 // @trace-pilot cb666341ff39b91336b8a3d746e528a20513f7db
