@@ -1,0 +1,1 @@
+Refactor NES PPU memory access handling to properly handle address ranges that should not be used during actual operation, replacing prior mirroring logic and modulo operations with explicit unimplemented warnings for unreachable addresses and removing unnecessary modulo index wrapping for palette table accesses.
