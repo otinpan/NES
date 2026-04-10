@@ -1,0 +1,55 @@
+# Record 1: /home/hase/NES/nes/src/ppu/mod.rs
+```diff
+===================================================================
+--- mod.rs (before)	snapshot
++++ mod.rs (after)	external
+@@ -182,19 +182,16 @@
+             0..=0x1fff => println!("attempt to write to chr rom space {}",addr),
+             0x2000..=0x2fff =>{
+                 self.vram[self.mirror_vram_addr(addr) as usize]=value;
+             }
+-            0x3000..=0x3eff =>{
+-                let mirrored_addr = addr - 0x1000;
+-                self.vram[self.mirror_vram_addr(mirrored_addr) as usize]=value;
+-            }
++            0x3000..=0x3eff => unimplemented!("addr {} should not be used in reallity",addr),
+ 
+             0x3f10 | 0x3f14 | 0x3f18 | 0x3f1c =>{
+                 let add_mirror=addr-0x10;
+-                self.palette_table[((add_mirror - 0x3f00) % 32) as usize]=value;
++                self.palette_table[(add_mirror - 0x3f00) as usize]=value;
+             }
+             0x3f00..=0x3fff=>{
+-                self.palette_table[((addr-0x3f00) % 32) as usize]=value;
++                self.palette_table[(addr-0x3f00) as usize]=value;
+             }
+             _ => panic!("unexpected access to mirrored space {}",addr),
+         }
+         // @trace-pilot ce4fccd0b1086b3af0cd2a3b3bf74a0d7b8e0cbc
+@@ -219,19 +216,16 @@
+                 self.internal_data_buf=self.vram[self.mirror_vram_addr(addr) as usize];
+                 result
+             }
+             0x3000..=0x3eff=>{
+-                let result=self.internal_data_buf;
+-                let mirrored_addr = addr - 0x1000;
+-                self.internal_data_buf=self.vram[self.mirror_vram_addr(mirrored_addr) as usize];
+-                result
++                unimplemented!("addr {} should not used in reallity",addr);
+             }
+             0x3f10 | 0x3f14 | 0x3f18 | 0x3f1c =>{
+                 let add_mirror=addr-0x10;
+-                self.palette_table[((add_mirror - 0x3f00) % 32) as usize]
++                self.palette_table[(add_mirror - 0x3f00) as usize]
+             }
+             0x3f00..0x3fff=>{
+-                self.palette_table[((addr-0x3f00) % 32) as usize]
++                self.palette_table[(addr-0x3f00) as usize]
+             }
+             _ =>panic!("unexpected access to mirrored space {}",addr),
+         }
+     }
+
+```
+
+The LLM likely generated code modifications that replace previous mirroring logic for PPU VRAM address ranges 0x3000 to 0x3EFF with unimplemented!() calls to indicate these addresses should not be used. It also removed modulo operations (%) when indexing into the palette_table, using direct subtraction indices instead, simplifying and clarifying the addressing. These changes suggest a focus on correct NES PPU emulation behavior with clearer error paths and removal of redundant index normalization.
