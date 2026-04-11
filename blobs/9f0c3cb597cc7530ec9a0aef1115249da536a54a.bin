@@ -1,0 +1,1 @@
+Implement palette mirroring functionality in the NES PPU module, fixing how palette addresses in the range 0x3F00-0x3F1F are handled, and add a test to verify correct mirroring behavior for addresses like 0x3F20.
