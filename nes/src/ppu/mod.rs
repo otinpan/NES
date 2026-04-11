@@ -103,6 +103,9 @@ impl NesPPU{
         // @trace-pilot df34a82a31f4146f1092f50f9c2e2343a0f2b055
         // Each scanline lasts for 341 PPU clock cycles
         if self.cycles >=341{
+            if self.is_sprite_zero_hit(self.cycles){
+                self.status.set_sprite_zero_hit(true);
+            }
             self.cycles=self.cycles-341;
             self.scanline+=1;
 
@@ -127,6 +130,12 @@ impl NesPPU{
             }
         }
         return false;
+    }
+
+    fn is_sprite_zero_hit(&self, cycle: usize) -> bool{
+        let y=self.oam_data[0] as usize;
+        let x=self.oam_data[1] as usize;
+        (y==self.scanline as usize) && x<=cycle && self.mask.show_sprites()
     }
 
     pub fn poll_nmi_interrupt(&mut self) -> Option<u8>{
