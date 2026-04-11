@@ -101,7 +101,7 @@ impl Mem for Bus<'_>{
                 0
             }
             0x4016 =>{
-                0
+                self.joypad1.read()
             }
             0x4017 =>{
                 0
@@ -114,6 +114,7 @@ impl Mem for Bus<'_>{
             0x8000..=0xffff => self.read_prg_rom(addr),
             _ =>{
                 println!("Ignoreing mem access at {}",addr);
+                //panic!("Ignoreing mem access at {}",addr);
                 0
             }
         }
@@ -134,7 +135,7 @@ impl Mem for Bus<'_>{
             0x2006 => self.ppu.write_to_ppu_addr(data),
             0x2007 => self.ppu.write_to_data(data),
             0x4016 =>{
-                // ignore joypad1
+                self.joypad1.write(data);
             },
             0x4017 =>{
                 // ignore joypad2
@@ -153,10 +154,11 @@ impl Mem for Bus<'_>{
                 self.mem_write(mirror_down_addr,data);
             }
             0x8000..=0xffff=>{
-                panic!("Attempt to write to Cartridge ROM space")
+                panic!("Attempt to write to Cartridge ROM space");
             }
             _ =>{
                 println!("Ignoreing mem access at {}",addr);
+                //panic!("Ignoreing mem access at {}", addr);
             }
         }
     }
