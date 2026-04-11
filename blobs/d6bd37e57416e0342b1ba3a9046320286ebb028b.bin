@@ -1,0 +1,1 @@
+Implement VRAM mirroring handling for the PPU in the NES emulator, specifically for address range 0x3000 to 0x3EFF, and add a test to verify correct read/write behavior in this mirrored region.
