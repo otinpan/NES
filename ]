@@ -1,5 +1,0 @@
-// @trace-pilot e99bb37f3e374b748f68a2dace509f23ad3a6889
-//v: During rendering, used for the scroll position. Outside of rendering, used as the current VRAM address.
-
-pub struct AddRegister{
-
