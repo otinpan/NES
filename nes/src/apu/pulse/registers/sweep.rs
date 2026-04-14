@@ -20,16 +20,18 @@ bitflags!{
     }
 }
 
+// @trace-pilot 97fe1ccecc09eef5cb02224865633d53791b718e
+// 自動で周波数（音の高さ）を変える仕組み
 impl SweepRegister{
     pub fn new() -> Self{
         SweepRegister::from_bits_truncate(0b0000_0000)
     }
 
-    pub fn sweep_period(&self) -> u8{
+    pub fn period(&self) -> u8{
         (self.bits()>>4) & 0b0000_0111
     }
 
-    pub fn shift_count(&self) -> u8{
+    pub fn shift(&self) -> u8{
         self.bits() & 0b0000_0111
     }
 
@@ -37,7 +39,7 @@ impl SweepRegister{
         self.contains(SweepRegister::ENABLE)
     }
 
-    pub fn negate_flag(&self) -> bool{
+    pub fn negate(&self) -> bool{
         self.contains(SweepRegister::NEGATE_FLAG)
     }
 

@@ -49,6 +49,6 @@ impl ControlRegister{
     }
 
     pub fn update(&mut self,data:u8){
-        *self=ContorlRegister::from_bits_truncate(data);
+        *self=ControlRegister::from_bits_truncate(data);
     }
 }

@@ -20,4 +20,8 @@ impl TimerHighRegister {
     pub fn update(&mut self, data: u8) {
         self.value = data;
     }
+
+    pub fn bits(&self) -> u8 {
+        self.value
+    }
 }
