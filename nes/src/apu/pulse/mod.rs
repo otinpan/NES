@@ -1,3 +1,5 @@
+// @trace-pilot 660fde180437a43c988b08d95b8d0c705ae71055
+// APU Pulse
 use registers::control::ControlRegister;
 use registers::sweep::SweepRegister;
 use registers::timer_high::TimerHighRegister;
@@ -75,6 +77,7 @@ impl PulseChannel{
             }
         }
     }
+
     // @trace-pilot 67fb2c1c9df0bc696b53f8f34a22649b3ac6937b
     // Duty Cycle Sequences
     const DUTY_TABLE: [[u8;8];4]=[
