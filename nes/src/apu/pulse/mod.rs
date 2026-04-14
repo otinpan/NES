@@ -85,7 +85,7 @@ impl PulseChannel{
     ];
 
     pub fn output(&self) -> u8{
-        if self.sweep_target() > 0x77FF{
+        if self.sweep_target() > 0x07FF{
             return 0;
         }
         if self.length_counter==0{
