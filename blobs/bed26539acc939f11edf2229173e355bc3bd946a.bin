@@ -1,0 +1,12 @@
+fn sweep_target(&self) -> u16 {
+    let period = self.timer_period();
+    let shift = self.sweep.shift();
+
+    let change = period >> shift;
+
+    if self.sweep.negate() {
+        period - change - 1 // pulse1
+    } else {
+        period + change
+    }
+}
