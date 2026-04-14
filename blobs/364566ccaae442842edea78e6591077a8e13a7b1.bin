@@ -1,0 +1,18 @@
+pub fn clock_sweep(&mut self) {
+    if self.sweep_reload {
+        self.sweep_reload = false;
+        self.sweep_divider = self.sweep.period();
+    } else if self.sweep_divider == 0 {
+        self.sweep_divider = self.sweep.period();
+
+        if self.sweep.enabled() && self.sweep.shift() > 0 {
+            let target = self.sweep_target();
+
+            if target <= 0x7FF {
+                self.set_timer_period(target);
+            }
+        }
+    } else {
+        self.sweep_divider -= 1;
+    }
+}
