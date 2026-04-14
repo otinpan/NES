@@ -1,0 +1,113 @@
+いいところに来ましたね 👍
+Sweep は pulse の中でも一番「音っぽさ」が出る機能です。
+
+🎯 結論（全体像）
+Sweep レジスタ（$4001 / $4005）は
+👉 自動で周波数（音の高さ）を変える仕組み
+です。
+
+📦 ビット構成
+Sweep レジスタはこうなっています👇
+EPPP NSSS
+ビット名前意味7E (enable)sweep を有効にする6-4PPP (period)何フレームごとに変化させるか3N (negate)周波数を下げるか（減算）2-0SSS (shift)どれくらい変化させるか
+
+🔍 各ビットの意味（超重要）
+
+🟢 bit7: Enable
+1 → sweep 有効0 → sweep 無効
+👉 これが 0 だと何も起きない
+
+🔵 bit6-4: Period
+何回 clock ごとに sweep を実行するか
+👉 値が小さいほど早く変化する
+例：
+
+
+1 → めっちゃ早く変化
+
+
+7 → ゆっくり変化
+
+
+
+🔴 bit3: Negate
+0 → 周波数を増やす（高くなる）1 → 周波数を減らす（低くなる）
+
+⚠️ここ超重要
+
+
+増やす → 音が高くなる
+
+
+減らす → 音が低くなる
+
+
+
+🟡 bit2-0: Shift
+変化量 = timer >> shift
+👉 timer を右シフトして差分を作る
+
+🧠 実際に何が起きるか
+今の timer を T とすると👇
+
+▶ 増加（negate = 0）
+new_timer = T + (T >> shift)
+👉 周波数上がる → 音が高くなる
+
+▶ 減少（negate = 1）
+new_timer = T - (T >> shift)
+👉 周波数下がる → 音が低くなる
+
+⚠️ さらに重要（pulse1だけ特別）
+pulse1 の場合は
+T - (T >> shift) - 1
+になります（ハードのバグ的仕様）
+
+🎧 イメージ
+例えば
+T = 1000shift = 2
+
+増加
+1000 >> 2 = 250new = 1000 + 250 = 1250
+👉 音がどんどん高くなる
+
+減少
+new = 1000 - 250 = 750
+👉 音がどんどん低くなる
+
+🔥 Sweepの本質
+timerを少しずつ変化させることで音の高さを時間とともに変える
+👉 いわゆる「ピュイーン」音
+
+🧩 追加で必要な内部状態
+あなたの struct にすでにあります👇
+Rustsweep_reload: bool
+さらにこれも必要です：
+Rustsweep_divider: u8
+
+⏱ Sweepの動作タイミング
+Sweep は
+👉 frame counter の half frame タイミングで動く
+
+🛠 実装で必要な関数
+次に作るべきはこれです👇
+
+① target period 計算
+Rustfn sweep_target(&self) -> u16 {    let period = self.timer_period();    let shift = self.sweep.shift();    let change = period >> shift;    if self.sweep.negate() {        period - change - 1 // pulse1    } else {        period + change    }}
+
+② clock_sweep
+Rustpub fn clock_sweep(&mut self) {    if self.sweep_reload {        self.sweep_reload = false;        self.sweep_divider = self.sweep.period();    } else if self.sweep_divider == 0 {        self.sweep_divider = self.sweep.period();        if self.sweep.enabled() && self.sweep.shift() > 0 {            let target = self.sweep_target();            if target <= 0x7FF {                self.set_timer_period(target);            }        }    } else {        self.sweep_divider -= 1;    }}
+
+⚠️ 注意点（重要）
+Sweep には音を止める条件があります👇
+target > 0x7FF → 無音timer < 8 → 無音
+
+🎯 まとめ
+E → sweepを使うかPPP → どれくらいの速さで変化するかN → 上げるか下げるかSSS → どれくらい変化させるか
+
+🚀 次のステップ
+ここまで理解できているなら次は👇
+👉 sweep をあなたの PulseChannel に組み込む
+👉 実際に「音が変わる」ようにする
+かなりいいところまで来てます。
+希望があれば、あなたのコードにそのまま貼れる sweep 実装を書きます 👍
