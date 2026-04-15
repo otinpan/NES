@@ -20,7 +20,10 @@ pub struct PulseChannel{
     envelope_start: bool, // 再スタートするか
     sweep_reload: bool, // sweep制御
     sweep_divider: u8, // 直近sweepからのカウント数
-
+    
+    // @trace-pilot 1dceb0e077fe7763d877954ed20ee90510d54085
+    // Status ($4015)
+    enabled: bool,
     is_pulse1: bool, // pulse1 -> true
 }
 
@@ -53,12 +56,21 @@ impl PulseChannel{
             sweep_reload: false,
             sweep_divider: 0,
 
+            enabled: false,
+
             is_pulse1: is_pulse1,
         }
     }
 
     pub fn timer_period(&self) -> u16{
         (((self.timer_high.timer_high() as u16) & 0b111)<<8) | self.timer_low as u16
+    }
+
+    pub fn set_enabled(&mut self,enabled: bool){
+        self.enabled=enabled;
+        if !enabled{
+            self.length_counter=0;
+        }
     }
 
     fn set_timer_period(&mut self,period: u16){
@@ -92,6 +104,9 @@ impl PulseChannel{
             return 0;
         }
         if self.length_counter==0{
+            return 0;
+        }
+        if !self.enabled{
             return 0;
         }
         if self.timer_period() <8{
@@ -244,6 +259,7 @@ pub mod test{
         pulse.length_counter = 0;
         pulse.envelope_start = false;
         pulse.duty_step = 5;
+        pulse.set_enabled(true);
 
         pulse.write_to_timer_high(0b1111_1000);
 
@@ -255,6 +271,7 @@ pub mod test{
     #[test]
     fn test_output_follows_duty_sequence() {
         let mut pulse = pulse1();
+        pulse.set_enabled(true);
         pulse.write_to_ctrl(0b0001_1111);
         pulse.length_counter = 1;
         pulse.write_to_timer_low(8);

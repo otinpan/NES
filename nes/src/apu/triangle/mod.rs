@@ -13,6 +13,10 @@ pub struct TriangleChannel{
     length_counter: u8,
     linear_counter: u8,
     reload_flag: bool,
+
+    // @trace-pilot 1dceb0e077fe7763d877954ed20ee90510d54085
+    // Status ($4015)
+    enabled: bool,
 }
 
 pub trait Triangle{
@@ -37,6 +41,8 @@ impl TriangleChannel{
             length_counter: 0,
             linear_counter: 0,
             reload_flag: false,
+
+            enabled: false,
         }
     }
 
@@ -48,6 +54,13 @@ impl TriangleChannel{
         self.timer_low=(period  & 0x00FF) as u8;
         let high=(self.timer_high.bits() & 0b1111_1000) | (((period>>8) as u8) & 0b0000_0111);
         self.timer_high.update(high);
+    }
+
+    pub fn set_enabled(&mut self,enabled: bool){
+        self.enabled=enabled;
+        if !enabled{
+            self.length_counter=0;
+        }
     }
 
     pub fn tick(&mut self,cycles: u8){
@@ -80,7 +93,7 @@ impl TriangleChannel{
     ];
 
     pub fn output(&self) ->u8{
-        if self.length_counter==0 || self.linear_counter==0{
+        if !self.enabled || self.length_counter==0 || self.linear_counter==0{
             return 0;
         }
 
@@ -121,7 +134,9 @@ impl Triangle for TriangleChannel{
 
     fn write_to_timer_high(&mut self,data: u8){
         self.timer_high.update(data);
-        self.length_counter=Self::LENGTH_TABLE[self.timer_high.length_counter_load() as usize];
+        if self.enabled{
+            self.length_counter=Self::LENGTH_TABLE[self.timer_high.length_counter_load() as usize];
+        }
         self.reload_flag=true;
     }
 
@@ -160,6 +175,7 @@ mod test {
         let mut tri = triangle();
         tri.length_counter = 0;
         tri.reload_flag = false;
+        tri.set_enabled(true);
 
         tri.write_to_timer_high(0b1111_1000);
 
@@ -213,6 +229,7 @@ mod test {
     #[test]
     fn test_output_is_muted_when_counters_are_zero_or_period_too_small() {
         let mut tri = triangle();
+        tri.set_enabled(true);
         tri.sequence_step = 4;
         tri.length_counter = 1;
         tri.linear_counter = 1;
@@ -233,6 +250,7 @@ mod test {
     #[test]
     fn test_output_uses_triangle_sequence_when_active() {
         let mut tri = triangle();
+        tri.set_enabled(true);
         tri.length_counter = 1;
         tri.linear_counter = 1;
         tri.write_to_timer_low(2);
@@ -251,6 +269,7 @@ mod test {
     #[test]
     fn test_tick_advances_sequence_only_when_both_counters_are_non_zero() {
         let mut tri = triangle();
+        tri.set_enabled(true);
         tri.write_to_timer_low(2);
         tri.write_to_timer_high(0);
         tri.timer_counter = 0;
