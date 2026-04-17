@@ -7,7 +7,7 @@ use registers::length::LengthRegister;
 
 pub mod registers;
 
-pub struct NoiseRegister{
+pub struct NoiseChannel{
     pub ctrl: ControlRegister,
     pub period: PeriodRegister,
     pub length: LengthRegister,
@@ -35,9 +35,10 @@ pub trait Noise{
     fn read_period(&self) -> u8;
     fn read_length(&self) -> u8;
 }
-impl NoiseRegister{
+
+impl NoiseChannel{
     pub fn new() -> Self{
-        NoiseRegister{
+        NoiseChannel{
             ctrl: ControlRegister::new(),
             period: PeriodRegister::new(),
             length: LengthRegister::new(),
@@ -142,7 +143,7 @@ impl NoiseRegister{
 
 }
 
-impl Noise for NoiseRegister{
+impl Noise for NoiseChannel{
     fn write_to_ctrl(&mut self,data :u8){
         self.ctrl.update(data);
     }
@@ -181,8 +182,8 @@ impl Noise for NoiseRegister{
 mod test {
     use super::*;
 
-    fn noise() -> NoiseRegister {
-        NoiseRegister::new()
+    fn noise() -> NoiseChannel {
+        NoiseChannel::new()
     }
 
     #[test]
@@ -192,7 +193,7 @@ mod test {
         noise.write_to_period(0b1000_1010);
 
         assert!(noise.period.mode());
-        assert_eq!(noise.timer, NoiseRegister::NOISE_PERIOD_TABLE[0b1010]);
+        assert_eq!(noise.timer, NoiseChannel::NOISE_PERIOD_TABLE[0b1010]);
     }
 
     #[test]
@@ -208,7 +209,7 @@ mod test {
         noise.envelope_start = false;
         noise.write_to_length(0b1111_1000);
 
-        assert_eq!(noise.length_counter, NoiseRegister::LENGTH_TABLE[0b1_1111]);
+        assert_eq!(noise.length_counter, NoiseChannel::LENGTH_TABLE[0b1_1111]);
         assert!(noise.envelope_start);
     }
 
