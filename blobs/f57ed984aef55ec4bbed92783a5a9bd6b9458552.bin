@@ -1,0 +1,1 @@
+Reading this register clears the frame interrupt flag (but not the DMC interrupt flag).
