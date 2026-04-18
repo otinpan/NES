@@ -4,10 +4,12 @@ pub mod pulse;
 pub mod triangle;
 pub mod noise;
 pub mod registers;
+pub mod dmc;
 
 use pulse::PulseChannel;
 use triangle::TriangleChannel;
 use noise::NoiseChannel;
+use dmc::DMCChannel;
 use registers::status::StatusRegister;
 use registers::frame_counter::FrameCounterRegister;
 
@@ -16,6 +18,7 @@ pub struct NesAPU{
     pub pulse2: PulseChannel,
     pub triangle: TriangleChannel,
     pub noise: NoiseChannel,
+    pub dmc: DMCChannel,
 
     pub status: StatusRegister,
     pub frame_counter: FrameCounterRegister,
@@ -42,7 +45,8 @@ impl NesAPU{
             pulse2: PulseChannel::new(false),
             triangle: TriangleChannel::new(),
             noise: NoiseChannel::new(),
-            
+            dmc: DMCChannel::new(),
+
             status: StatusRegister::new(),
             frame_counter: FrameCounterRegister::new(),
 
@@ -71,6 +75,10 @@ impl NesAPU{
         self.triangle.clock_length_counter();
         self.noise.clock_length_counter();
     }
+
+    pub fn send_irq(&self){
+        // dmcのサンプルが終了 or mode0の最後のステップ&& !irq_inhibit()
+    }
 }
 
 impl APU for NesAPU{
@@ -80,7 +88,7 @@ impl APU for NesAPU{
         self.pulse2.set_enabled(self.status.pulse2());
         self.triangle.set_enabled(self.status.triangle());
         self.noise.set_enabled(self.status.noise());
-        todo!("dmc")
+        self.dmc.set_enabled(self.status.dmc());
     }
 
     fn read_status(&mut self) -> u8{
@@ -101,6 +109,9 @@ impl APU for NesAPU{
             result=result | 0b0000_1000;
         }
 
+        if self.dmc.is_sample_counter(){
+            result=result | 0b0001_0000;
+        }
     
         // @trace-pilot 4e190e58eafb304aeb7eb8d9ba0cef2798debe45
         // Reading this register clears the frame interrupt flag (but not the DMC interrupt flag).

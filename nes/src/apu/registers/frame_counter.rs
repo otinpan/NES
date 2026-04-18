@@ -1,4 +1,12 @@
-// Frame counter ($4017)
+// @trace-pilot b6d6835dfc16672840e61fcf4b251453a9eaa7ee
+// APU Frame Counter
+
+// @trace-pilot da75ae087c45a33c2cc1dd24729439571523eab8
+// mode 0:    mode 1:       function 
+// ---------  -----------  -----------------------------  
+// - - - f    - - - - -    IRQ (if bit 6 is clear)  
+// - l - l    - l - - l    Length counter and sweep  
+// e e e e    e e e - e    Envelope and linear counter
 bitflags!{
     pub struct FrameCounterRegister: u8{
         const IRQ_INHIBIT   = 0b0100_0000;
