@@ -2,7 +2,7 @@
 bitflags!{
     pub struct FrameCounterRegister: u8{
         const IRQ_INHIBIT   = 0b0100_0000;
-        const SEQUENCER_MODE= 0b1000_0000;
+        const FIVE_STEP_MODE= 0b1000_0000;
     }
 }
 
@@ -15,8 +15,8 @@ impl FrameCounterRegister{
         self.contains(FrameCounterRegister::IRQ_INHIBIT)
     }
 
-    pub fn sequencer_mode(&self) -> bool{
-        self.contains(FrameCounterRegister::SEQUENCER_MODE)
+    pub fn five_step_mode(&self) -> bool{
+        self.contains(FrameCounterRegister::FIVE_STEP_MODE)
     }
 
     pub fn update(&mut self, data: u8){

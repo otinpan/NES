@@ -63,6 +63,10 @@ impl TriangleChannel{
         }
     }
 
+    pub fn get_length_counter(&self) ->u8{
+        self.length_counter
+    }
+
     pub fn tick(&mut self,cycles: u8){
         for _ in 0..cycles{
             if self.timer_counter==0{

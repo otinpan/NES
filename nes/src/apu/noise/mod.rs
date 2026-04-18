@@ -75,6 +75,10 @@ impl NoiseChannel{
         }
     }
 
+    pub fn get_length_counter(&self) -> u8{
+        self.length_counter
+    }
+
     fn shift(&mut self){
         let bit0=self.shift_register&1;
         let tap=if self.period.mode(){

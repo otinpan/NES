@@ -73,6 +73,10 @@ impl PulseChannel{
         }
     }
 
+    pub fn get_length_counter(&self) ->u8{
+        self.length_counter
+    }
+
     fn set_timer_period(&mut self,period: u16){
         self.timer_low=(period & 0x00FF) as u8;
         let high=(self.timer_high.bits() & 0b1111_1000) | (((period>>8) as u8) & 0b0000_0111);
