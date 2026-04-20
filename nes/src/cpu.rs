@@ -379,6 +379,17 @@ impl<'a> CPU<'a>{
         self.compare(mode,self.register_a);
     }
 
+// @trace-pilot 6bb233c0f2a7c2abfa65859011143a29f0c1f3b4
+    // AXS/SBX - unofficial opcode
+    fn axs(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        let anded = self.register_a & self.register_x;
+        self.status.set(CpuFlags::CARRY, anded >= value);
+        self.register_x = anded.wrapping_sub(value);
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
     // @trace-pilot ea4f1767c9b1091f6d2085e922947e5216be696a
     //CPX - Compare X Register
     fn cpx(&mut self,mode: &AddressingMode){
@@ -781,7 +792,7 @@ impl<'a> CPU<'a>{
             }
             callback(self);
             let code = self.mem_read(self.program_counter);
-            self.program_counter += 1;
+            self.program_counter = self.program_counter.wrapping_add(1);
             let program_counter_state = self.program_counter;
 
             let opcode = opcodes.get(&code).expect(&format!("OpCode {:x} is not recognized", code));
@@ -854,6 +865,10 @@ impl<'a> CPU<'a>{
                 0xc9 | 0xc5 | 0xd5 | 0xcd | 0xdd | 0xd9 | 0xc1 | 0xd1 =>{
                     self.cmp(&opcode.mode);
                 }
+
+// @trace-pilot 6bb233c0f2a7c2abfa65859011143a29f0c1f3b4
+                // AXS/SBX (unofficial)
+                0xcb => self.axs(&opcode.mode),
 
                 // CPX
                 0xe0 | 0xe4 | 0xec =>{
@@ -1033,7 +1048,9 @@ impl<'a> CPU<'a>{
             self.bus.tick(opcode.cycles);
 
             if program_counter_state == self.program_counter {
-                self.program_counter += (opcode.len - 1) as u16;
+                self.program_counter = self
+                    .program_counter
+                    .wrapping_add((opcode.len - 1) as u16);
             }
         }
     }
@@ -1089,6 +1106,56 @@ mod test {
         cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
 
         assert_eq!(cpu.register_x, 1)
+    }
+
+    #[test]
+    fn test_program_counter_wraps_on_opcode_fetch() {
+        let mut program = vec![0; 0x8000];
+        program[0x7fff] = 0x00;
+        let bus=Bus::new(test::test_rom(program),|_ppu,_apu,_joypad|{});
+        let mut cpu = CPU::new(bus);
+        cpu.program_counter = 0xffff;
+
+        cpu.run();
+
+        assert_eq!(cpu.program_counter, 0x0000);
+    }
+
+    #[test]
+// @trace-pilot 6bb233c0f2a7c2abfa65859011143a29f0c1f3b4
+    fn test_0xcb_axs_updates_x_and_carry() {
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
+        let mut cpu = CPU::new(bus);
+
+        cpu.load_and_run(vec![
+            0xa9, 0x0f, // LDA #$0f
+            0xa2, 0x0a, // LDX #$0a
+            0xcb, 0x08, // AXS #$08 => X = (0x0f & 0x0a) - 0x08 = 0x02
+            0x00,
+        ]);
+
+        assert_eq!(cpu.register_x, 0x02);
+        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(!cpu.status.contains(CpuFlags::ZERO));
+        assert!(!cpu.status.contains(CpuFlags::NEGATIV));
+    }
+
+    #[test]
+    fn test_0xcb_axs_wraps_and_clears_carry() {
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
+        let mut cpu = CPU::new(bus);
+
+        cpu.load_and_run(vec![
+            0xa9, 0x03, // LDA #$03
+            0xa2, 0x07, // LDX #$07
+            0xcb, 0x05, // AXS #$05 => X = (0x03 & 0x07) - 0x05 = 0xfe
+            0x00,
+        ]);
+
+        assert_eq!(cpu.register_x, 0xfe);
+        assert!(!cpu.status.contains(CpuFlags::CARRY));
+        assert!(!cpu.status.contains(CpuFlags::ZERO));
+        assert!(cpu.status.contains(CpuFlags::NEGATIV));
     }
 
     #[test]

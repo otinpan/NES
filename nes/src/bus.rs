@@ -252,7 +252,7 @@ impl Mem for Bus<'_>{
                 self.mem_write(mirror_down_addr,data);
             }
             0x8000..=0xffff=>{
-                panic!("Attempt to write to Cartridge ROM space");
+                println!("Attempt to write to Cartridge ROM space");
             }
             _ =>{
                 println!("Ignoreing mem access at {}",addr);
