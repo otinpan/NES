@@ -1,0 +1,112 @@
+では、今の NesAPU にできるだけ合わせて、clock_frame_counter() を cycleベース に直した例を書きます。
+ポイントはこれです。
+
+
+clock_frame_counter() は 毎CPUサイクル呼ぶ
+
+
+ただし quarter/half frame を動かすのは 決まった cycle のときだけ
+
+
+frame_step は無理に使わなくてもよい
+
+
+frame_interrupt を frame IRQ の本体にする 貼り付けられたテキスト（1 点）
+
+
+
+修正版のイメージ
+Rustpub fn tick(&mut self, cycles: u8) {    for _ in 0..cycles {        self.cycles += 1;        // triangleは毎CPU cycle        self.triangle.tick(1);        // pulse/noise/dmcは2CPU cycleに1回        if self.cycles % 2 == 0 {            self.pulse1.tick(1);            self.pulse2.tick(1);            self.noise.tick(1);            self.dmc.clock_sample();        }        self.clock_frame_counter();    }}
+この形はそのままで大丈夫です。問題は clock_frame_counter() の中身です。貼り付けられたテキスト（1 点）
+
+修正版 clock_frame_counter()
+Rustpub fn clock_frame_counter(&mut self) {    if self.frame_counter.five_step_mode() {        match self.cycles {            3729 => {                self.clock_quater_frame();            }            7457 => {                self.clock_quater_frame();                self.clock_half_frame();            }            11186 => {                self.clock_quater_frame();            }            14915 => {                // 5-step mode のこの位置では何もしない            }            18641 => {                self.clock_quater_frame();                self.clock_half_frame();                // 5-step mode は frame IRQ を出さない                self.cycles = 0;            }            _ => {}        }    } else {        match self.cycles {            3729 => {                self.clock_quater_frame();            }            7457 => {                self.clock_quater_frame();                self.clock_half_frame();            }            11186 => {                self.clock_quater_frame();            }            14915 => {                self.clock_quater_frame();                self.clock_half_frame();                if !self.frame_counter.irq_inhibit() {                    self.frame_interrupt = true;                }                self.cycles = 0;            }            _ => {}        }    }}
+
+あわせて直した方がよいところ
+今のコードだと IRQ 状態が is_irq と frame_interrupt に分かれていますが、これは混乱しやすいです。貼り付けられたテキスト（1 点） 貼り付けられたテキスト（1 点）
+なので、こうすると分かりやすいです。
+get_irq()
+Rustpub fn get_irq(&self) -> bool {    self.dmc.irq_flag || self.frame_interrupt}
+set_irq() は消してよい
+frame_interrupt を直接立てれば十分です。
+
+read_status() も少し整理
+今の read_status() は、frame_interrupt を読む実装としては方向性は合っています。
+ただ、frame IRQ は $4015 を読むとクリアされるので、そのままこう使えばOKです。貼り付けられたテキスト（1 点）
+Rustfn read_status(&mut self) -> u8 {    let mut result = 0;    if self.pulse1.get_length_counter() != 0 {        result |= 0b0000_0001;    }    if self.pulse2.get_length_counter() != 0 {        result |= 0b0000_0010;    }    if self.triangle.get_length_counter() != 0 {        result |= 0b0000_0100;    }    if self.noise.get_length_counter() != 0 {        result |= 0b0000_1000;    }    if self.dmc.is_sample_counter() {        result |= 0b0001_0000;    }    if self.frame_interrupt {        result |= 0b0100_0000;    }    if self.dmc.irq_flag {        result |= 0b1000_0000;    }    // $4015 read で frame IRQ は消える    self.frame_interrupt = false;    result}
+ここでは dmc_interrupt ではなく、self.dmc.irq_flag を直接使う方が自然です。
+
+write_to_frame_counter() もこうするとよい
+Rustfn write_to_frame_counter(&mut self, data: u8) {    self.frame_counter.update(data);    if self.frame_counter.irq_inhibit() {        self.frame_interrupt = false;    }    // シーケンスをリセット    self.cycles = 0;    // 5-step mode に切り替えたときは即座に quarter + half を1回実行    if self.frame_counter.five_step_mode() {        self.clock_quater_frame();        self.clock_half_frame();    }}
+
+修正後の考え方
+これで APU の時間の流れはこうなります。
+
+
+tick(cycles)
+
+
+CPU cycle ごとに進める
+
+
+
+
+triangle
+
+
+毎CPU cycle進む
+
+
+
+
+pulse / noise / dmc
+
+
+2CPU cycleごとに進む
+
+
+
+
+frame counter
+
+
+毎CPU cycleチェックするが、実際に envelope/length/sweep を進めるのは
+3729, 7457, 11186, 14915, 18641 のような特定点だけ
+
+
+
+
+
+いまのコードで危ない点の要約
+元の実装では frame_step を毎回進めたり、4-step 側で増やしていなかったりして、frame counter が壊れていました。貼り付けられたテキスト（1 点）
+なので、stepベースより cycleベースの方が安全です。
+
+おすすめの最終形
+NesAPU のフィールドはこう整理すると見通しがよくなります。
+Rustpub struct NesAPU {    pub pulse1: PulseChannel,    pub pulse2: PulseChannel,    pub triangle: TriangleChannel,    pub noise: NoiseChannel,    pub dmc: DMCChannel,    pub status: StatusRegister,    pub frame_counter: FrameCounterRegister,    pub frame_interrupt: bool,    cycles: usize,}
+つまり、まずは
+
+
+frame_step を削除
+
+
+is_irq を削除
+
+
+dmc_interrupt を削除
+
+
+IRQは
+
+
+frame系 → frame_interrupt
+
+
+dmc系 → dmc.irq_flag
+
+
+
+
+に分けるとかなり分かりやすくなります。
+
+必要なら次に、この mod.rs 全体をそのまま置き換えられる形で完全版を書きます。
