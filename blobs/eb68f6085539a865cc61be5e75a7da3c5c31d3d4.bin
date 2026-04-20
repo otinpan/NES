@@ -1,0 +1,14 @@
+pub struct NesAPU {
+    pub pulse1: PulseChannel,
+    pub pulse2: PulseChannel,
+    pub triangle: TriangleChannel,
+    pub noise: NoiseChannel,
+    pub dmc: DMCChannel,
+
+    pub status: StatusRegister,
+    pub frame_counter: FrameCounterRegister,
+
+    pub frame_interrupt: bool,
+
+    cycles: usize,
+}
