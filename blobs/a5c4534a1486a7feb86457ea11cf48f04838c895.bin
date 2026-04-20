@@ -1,0 +1,1 @@
+Add support for the unofficial 6502 CPU opcode 0xCB (AXS/SBX) to the NES emulator's CPU implementation, including opcode handling, the CPU method, and tests verifying correct behavior of the new instruction.
