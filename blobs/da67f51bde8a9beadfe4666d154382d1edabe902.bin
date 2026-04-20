@@ -1,0 +1,32 @@
+fn read_status(&mut self) -> u8 {
+    let mut result = 0;
+
+    if self.pulse1.get_length_counter() != 0 {
+        result |= 0b0000_0001;
+    }
+    if self.pulse2.get_length_counter() != 0 {
+        result |= 0b0000_0010;
+    }
+    if self.triangle.get_length_counter() != 0 {
+        result |= 0b0000_0100;
+    }
+    if self.noise.get_length_counter() != 0 {
+        result |= 0b0000_1000;
+    }
+    if self.dmc.is_sample_counter() {
+        result |= 0b0001_0000;
+    }
+
+    if self.frame_interrupt {
+        result |= 0b0100_0000;
+    }
+
+    if self.dmc.irq_flag {
+        result |= 0b1000_0000;
+    }
+
+    // $4015 read で frame IRQ は消える
+    self.frame_interrupt = false;
+
+    result
+}
