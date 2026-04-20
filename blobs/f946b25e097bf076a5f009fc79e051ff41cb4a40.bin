@@ -1,0 +1,18 @@
+pub fn tick(&mut self, cycles: u8) {
+    for _ in 0..cycles {
+        self.cycles += 1;
+
+        // triangleは毎CPU cycle
+        self.triangle.tick(1);
+
+        // pulse/noise/dmcは2CPU cycleに1回
+        if self.cycles % 2 == 0 {
+            self.pulse1.tick(1);
+            self.pulse2.tick(1);
+            self.noise.tick(1);
+            self.dmc.clock_sample();
+        }
+
+        self.clock_frame_counter();
+    }
+}
