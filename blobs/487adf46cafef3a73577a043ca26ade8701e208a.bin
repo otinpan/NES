@@ -1,0 +1,51 @@
+pub fn clock_frame_counter(&mut self) {
+    if self.frame_counter.five_step_mode() {
+        match self.cycles {
+            3729 => {
+                self.clock_quater_frame();
+            }
+            7457 => {
+                self.clock_quater_frame();
+                self.clock_half_frame();
+            }
+            11186 => {
+                self.clock_quater_frame();
+            }
+            14915 => {
+                // 5-step mode のこの位置では何もしない
+            }
+            18641 => {
+                self.clock_quater_frame();
+                self.clock_half_frame();
+
+                // 5-step mode は frame IRQ を出さない
+                self.cycles = 0;
+            }
+            _ => {}
+        }
+    } else {
+        match self.cycles {
+            3729 => {
+                self.clock_quater_frame();
+            }
+            7457 => {
+                self.clock_quater_frame();
+                self.clock_half_frame();
+            }
+            11186 => {
+                self.clock_quater_frame();
+            }
+            14915 => {
+                self.clock_quater_frame();
+                self.clock_half_frame();
+
+                if !self.frame_counter.irq_inhibit() {
+                    self.frame_interrupt = true;
+                }
+
+                self.cycles = 0;
+            }
+            _ => {}
+        }
+    }
+}
