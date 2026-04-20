@@ -1,0 +1,85 @@
+# Record 1: /home/hase/NES/nes/src/cpu.rs
+```diff
+===================================================================
+--- cpu.rs (before)	snapshot
++++ cpu.rs (after)	idle
+@@ -378,8 +378,18 @@
+     fn cmp(&mut self,mode: &AddressingMode){
+         self.compare(mode,self.register_a);
+     }
+ 
++    // AXS/SBX - unofficial opcode
++    fn axs(&mut self, mode: &AddressingMode) {
++        let addr = self.get_operand_address(mode);
++        let value = self.mem_read(addr);
++        let anded = self.register_a & self.register_x;
++        self.status.set(CpuFlags::CARRY, anded >= value);
++        self.register_x = anded.wrapping_sub(value);
++        self.update_zero_and_negative_flags(self.register_x);
++    }
++
+     // @trace-pilot ea4f1767c9b1091f6d2085e922947e5216be696a
+     //CPX - Compare X Register
+     fn cpx(&mut self,mode: &AddressingMode){
+         self.compare(mode,self.register_x);
+@@ -854,8 +864,11 @@
+                 0xc9 | 0xc5 | 0xd5 | 0xcd | 0xdd | 0xd9 | 0xc1 | 0xd1 =>{
+                     self.cmp(&opcode.mode);
+                 }
+ 
++                // AXS/SBX (unofficial)
++                0xcb => self.axs(&opcode.mode),
++
+                 // CPX
+                 0xe0 | 0xe4 | 0xec =>{
+                     self.cpx(&opcode.mode);
+                 }
+@@ -1106,8 +1119,44 @@
+         assert_eq!(cpu.program_counter, 0x0000);
+     }
+ 
+     #[test]
++    fn test_0xcb_axs_updates_x_and_carry() {
++        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
++        let mut cpu = CPU::new(bus);
++
++        cpu.load_and_run(vec![
++            0xa9, 0x0f, // LDA #$0f
++            0xa2, 0x0a, // LDX #$0a
++            0xcb, 0x08, // AXS #$08 => X = (0x0f & 0x0a) - 0x08 = 0x02
++            0x00,
++        ]);
++
++        assert_eq!(cpu.register_x, 0x02);
++        assert!(cpu.status.contains(CpuFlags::CARRY));
++        assert!(!cpu.status.contains(CpuFlags::ZERO));
++        assert!(!cpu.status.contains(CpuFlags::NEGATIV));
++    }
++
++    #[test]
++    fn test_0xcb_axs_wraps_and_clears_carry() {
++        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
++        let mut cpu = CPU::new(bus);
++
++        cpu.load_and_run(vec![
++            0xa9, 0x03, // LDA #$03
++            0xa2, 0x07, // LDX #$07
++            0xcb, 0x05, // AXS #$05 => X = (0x03 & 0x07) - 0x05 = 0xfe
++            0x00,
++        ]);
++
++        assert_eq!(cpu.register_x, 0xfe);
++        assert!(!cpu.status.contains(CpuFlags::CARRY));
++        assert!(!cpu.status.contains(CpuFlags::ZERO));
++        assert!(cpu.status.contains(CpuFlags::NEGATIV));
++    }
++
++    #[test]
+     fn test_lda_from_memory() {
+         let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
+         let mut cpu = CPU::new(bus);
+         cpu.mem_write(0x10, 0x55);
+
+```
+
+The LLM generated Rust code implementing the unofficial AXS/SBX opcode (0xCB) as a method in the CPU struct that fetches the operand, performs bitwise AND between A and X registers, subtracts the operand, updates the X register and CPU status flags accordingly. It also added opcode matching in the opcode execution section to call this method, along with two unit tests verifying correct register and flag updates for carry set and carry clear cases.
