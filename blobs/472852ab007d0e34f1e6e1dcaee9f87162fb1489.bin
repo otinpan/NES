@@ -1,0 +1,16 @@
+fn write_to_frame_counter(&mut self, data: u8) {
+    self.frame_counter.update(data);
+
+    if self.frame_counter.irq_inhibit() {
+        self.frame_interrupt = false;
+    }
+
+    // シーケンスをリセット
+    self.cycles = 0;
+
+    // 5-step mode に切り替えたときは即座に quarter + half を1回実行
+    if self.frame_counter.five_step_mode() {
+        self.clock_quater_frame();
+        self.clock_half_frame();
+    }
+}
