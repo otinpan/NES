@@ -1,0 +1,3 @@
+pub fn get_irq(&self) -> bool {
+    self.dmc.irq_flag || self.frame_interrupt
+}
