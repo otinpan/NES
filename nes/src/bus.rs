@@ -9,6 +9,7 @@ use crate::ppu::PPU;
 use crate::joypad::Joypad;
 use crate::apu::NesAPU;
 use crate::apu::APU;
+use crate::audio::AudioPlayer;
 //  _______________ $10000  _______________
 // | PRG-ROM       |       |               |
 // | Upper Bank    |       |               |
@@ -47,16 +48,17 @@ pub struct Bus<'call>{
     prg_rom: Vec<u8>,
     ppu: NesPPU,
     apu: NesAPU,
+    audio: Option<AudioPlayer>,
 
     cycles: usize,
-    gameloop_callback: Box<dyn FnMut(&NesPPU, &mut Joypad) + 'call>,
+    gameloop_callback: Box<dyn FnMut(&NesPPU,&NesAPU,&mut Joypad) + 'call>,
     joypad1: Joypad,
 }
 
 impl<'a> Bus<'a>{
     pub fn new<'call,F>(rom: Rom, gameloop_callback: F) -> Bus<'call>
     where 
-        F: FnMut(&NesPPU,&mut Joypad) + 'call,
+        F: FnMut(&NesPPU,&NesAPU,&mut Joypad) + 'call,
     {
         let ppu=NesPPU::new(rom.chr_rom,rom.screen_mirroring);
         let apu=NesAPU::new();
@@ -65,10 +67,20 @@ impl<'a> Bus<'a>{
             prg_rom: rom.prg_rom,
             ppu: ppu,
             apu: apu,
+            audio: None,
             cycles: 0,
             gameloop_callback: Box::from(gameloop_callback),
             joypad1: Joypad::new(),
         }
+    }
+
+    pub fn new_with_audio<'call, F>(rom: Rom, gameloop_callback: F, audio: AudioPlayer) -> Bus<'call>
+    where
+        F: FnMut(&NesPPU, &NesAPU, &mut Joypad) + 'call,
+    {
+        let mut bus = Self::new(rom, gameloop_callback);
+        bus.audio = Some(audio);
+        bus
     }
 
     fn read_prg_rom(&self,mut addr:u16) -> u8{
@@ -80,20 +92,27 @@ impl<'a> Bus<'a>{
     }
 
     pub fn tick(&mut self,cycles: u8){
-        self.cycles+=cycles as usize;
-        let new_frame=self.ppu.tick(cycles*3);
-        self.apu.tick(cycles);
-
-        // DMC sample
         for _ in 0..cycles{
+            self.cycles+=1;
+            let new_frame=self.ppu.tick(3);
+            self.apu.tick(1);
+
             if self.apu.dmc.need_sample_buffer(){
                 let addr=self.apu.dmc.current_addr;
                 let data=self.mem_read(addr);
                 self.apu.dmc.push_sample_byte(data);
             }
-        }
-        if new_frame{
-            (self.gameloop_callback)(&self.ppu,&mut self.joypad1);
+
+            if let Some(audio)=self.audio.as_mut(){
+                audio.tick(&self.apu);
+            }
+
+            if new_frame{
+                if let Some(audio)=self.audio.as_mut(){
+                    audio.flush();
+                }
+                (self.gameloop_callback)(&self.ppu,&mut self.apu,&mut self.joypad1);
+            }
         }
     }
 
@@ -250,7 +269,7 @@ mod test{
 
     #[test]
     fn test_mem_read_write_to_ram(){
-        let mut bus=Bus::new(test::test_rom(vec![]), |_ppu,_joyad|{});
+        let mut bus=Bus::new(test::test_rom(vec![]), |_ppu,_apu,_joyad|{});
         bus.mem_write(0x01,0x55);
         assert_eq!(bus.mem_read(0x01),0x55);
     }

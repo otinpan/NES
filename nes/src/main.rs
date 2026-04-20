@@ -6,6 +6,7 @@ pub mod opcodes;
 pub mod trace;
 pub mod ppu;
 pub mod render;
+pub mod audio;
 pub mod joypad;
 
 use bus::Bus;
@@ -14,6 +15,7 @@ use cpu::CPU;
 use trace::trace;
 use render::frame::Frame;
 use ppu::NesPPU;
+use apu::NesAPU;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -30,6 +32,7 @@ fn main() {
     // init sdl2
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
+    let audio_subsystem = sdl_context.audio().unwrap();
     let window = video_subsystem
         .window("Tile viewer", (256.0 * 3.0) as u32, (240.0 * 3.0) as u32)
         .position_centered()
@@ -61,7 +64,10 @@ fn main() {
     key_map.insert(Keycode::A,joypad::JoypadButton::BUTTON_A);
     key_map.insert(Keycode::S,joypad::JoypadButton::BUTTON_B);
 
-    let bus = Bus::new(rom, move |ppu: &NesPPU, joypad: &mut joypad::Joypad|{
+    let audio_player = audio::AudioPlayer::new(&audio_subsystem).unwrap();
+
+    let bus = Bus::new_with_audio(rom, move |ppu: &NesPPU,_apu: &NesAPU,joypad: &mut joypad::Joypad|{
+        // render
         render::render(ppu, &mut frame);
         texture.update(None,&frame.data,256*3).unwrap();
         
@@ -91,7 +97,7 @@ fn main() {
                 _ =>{}
             }
         }
-    });
+    }, audio_player);
     let mut cpu = CPU::new(bus);
 
     cpu.reset();

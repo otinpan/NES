@@ -1045,10 +1045,11 @@ mod test {
     use crate::cartridge::test;
     use crate::ppu::NesPPU;
     use crate::joypad::Joypad;
+    use crate::apu::NesAPU;
 
     #[test]
     fn test_0xa9_lda_immediate_load_data() {
-        let bus=Bus::new(test::test_rom(vec![]), |_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]), |_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
@@ -1060,7 +1061,7 @@ mod test {
 
     #[test]
     fn test_0xaa_tax_move_a_to_x() {
-        let bus=Bus::new(test::test_rom(vec![]), |_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]), |_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
         cpu.register_a = 10;
 
@@ -1071,7 +1072,7 @@ mod test {
 
     #[test]
     fn test_5_ops_working_together() {
-        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
@@ -1081,7 +1082,7 @@ mod test {
 
     #[test]
     fn test_inx_overflow() {
-        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
         cpu.register_x = 0xff;
 
@@ -1092,7 +1093,7 @@ mod test {
 
     #[test]
     fn test_lda_from_memory() {
-        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
         cpu.mem_write(0x10, 0x55);
 
@@ -1103,7 +1104,7 @@ mod test {
 
     #[test]
     fn test_0x4a_lsr_accumulator() {
-        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
 
         cpu.load_and_run(vec![0xa9, 0x02, 0x4a, 0x00]);
@@ -1114,7 +1115,7 @@ mod test {
 
     #[test]
     fn test_0x08_php_pushes_status_to_stack() {
-        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
         cpu.status.insert(CpuFlags::CARRY);
         let expected = (cpu.status | CpuFlags::BREAK | CpuFlags::BREAK2).bits();
@@ -1130,7 +1131,7 @@ mod test {
 
     #[test]
     fn test_0x70_bvs_branch_taken() {
-        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
         cpu.status.insert(CpuFlags::OVERFLOW);
 
@@ -1142,7 +1143,7 @@ mod test {
 // @trace-pilot a1e3416f02c5121a2e205c78e8e2e8bc862c29cf
     #[test]
     fn test_dex_loop_with_cpx_and_bne() {
-        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
 
 // @trace-pilot a1e3416f02c5121a2e205c78e8e2e8bc862c29cf
@@ -1164,7 +1165,7 @@ mod test {
 // @trace-pilot cb666341ff39b91336b8a3d746e528a20513f7db
     #[test]
     fn test_stack_roundtrip_loop_with_absolute_y_store() {
-        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_joypad|{});
+        let bus=Bus::new(test::test_rom(vec![]),|_ppu,_apu,_joypad|{});
         let mut cpu = CPU::new(bus);
 
 // @trace-pilot cb666341ff39b91336b8a3d746e528a20513f7db
