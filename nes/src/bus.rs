@@ -1,8 +1,14 @@
+use crate::apu::pulse::Pulse;
+use crate::apu::triangle::Triangle;
+use crate::apu::noise::Noise;
+use crate::apu::dmc::DMC;
 use crate::cpu::Mem;
 use crate::cartridge::Rom;
 use crate::ppu::NesPPU;
 use crate::ppu::PPU;
 use crate::joypad::Joypad;
+use crate::apu::NesAPU;
+use crate::apu::APU;
 //  _______________ $10000  _______________
 // | PRG-ROM       |       |               |
 // | Upper Bank    |       |               |
@@ -40,6 +46,7 @@ pub struct Bus<'call>{
     cpu_vram: [u8; 2048],
     prg_rom: Vec<u8>,
     ppu: NesPPU,
+    apu: NesAPU,
 
     cycles: usize,
     gameloop_callback: Box<dyn FnMut(&NesPPU, &mut Joypad) + 'call>,
@@ -52,11 +59,12 @@ impl<'a> Bus<'a>{
         F: FnMut(&NesPPU,&mut Joypad) + 'call,
     {
         let ppu=NesPPU::new(rom.chr_rom,rom.screen_mirroring);
-
+        let apu=NesAPU::new();
         Bus{
             cpu_vram: [0; 2048],
             prg_rom: rom.prg_rom,
             ppu: ppu,
+            apu: apu,
             cycles: 0,
             gameloop_callback: Box::from(gameloop_callback),
             joypad1: Joypad::new(),
@@ -74,6 +82,16 @@ impl<'a> Bus<'a>{
     pub fn tick(&mut self,cycles: u8){
         self.cycles+=cycles as usize;
         let new_frame=self.ppu.tick(cycles*3);
+        self.apu.tick(cycles);
+
+        // DMC sample
+        for _ in 0..cycles{
+            if self.apu.dmc.need_sample_buffer(){
+                let addr=self.apu.dmc.current_addr;
+                let data=self.mem_read(addr);
+                self.apu.dmc.push_sample_byte(data);
+            }
+        }
         if new_frame{
             (self.gameloop_callback)(&self.ppu,&mut self.joypad1);
         }
@@ -97,14 +115,44 @@ impl Mem for Bus<'_>{
             0x2002 => self.ppu.read_status(),
             0x2004 => self.ppu.read_oam_data(),
             0x2007 => self.ppu.read_data(),
-            0x4000..=0x4015 =>{
+            // apu
+            // pulse
+            0x4000 => self.apu.pulse1.read_ctrl(),
+            0x4001 => self.apu.pulse1.read_sweep(),
+            0x4002 => self.apu.pulse1.read_timer_low(),
+            0x4003 => self.apu.pulse1.read_timer_high(),
+            0x4004 => self.apu.pulse2.read_ctrl(),
+            0x4005 => self.apu.pulse2.read_sweep(),
+            0x4006 => self.apu.pulse2.read_timer_low(),
+            0x4007 => self.apu.pulse2.read_timer_high(),
+            // triangle
+            0x4008 => self.apu.triangle.read_linear(),
+            0x4009 =>{
+                // unused
                 0
             }
+            0x400A => self.apu.triangle.read_timer_low(),
+            0x400B => self.apu.triangle.read_timer_high(),
+            // noise
+            0x400C => self.apu.noise.read_ctrl(),
+            0x400D =>{
+                // unused
+                0
+            }
+            0x400E => self.apu.noise.read_period(),
+            0x400F => self.apu.noise.read_length(),
+            // dmc
+            0x4010 => self.apu.dmc.read_ctrl(),
+            0x4011 => self.apu.dmc.read_dac(),
+            0x4012 => self.apu.dmc.read_sample_addr(),
+            0x4013 => self.apu.dmc.read_sample_length(),
+            // status
+            0x4015 => self.apu.read_status(),
+            // frame_counter
+            0x4017 => self.apu.read_frame_counter(),
+            // joypad1
             0x4016 =>{
                 self.joypad1.read()
-            }
-            0x4017 =>{
-                0
             }
     
             0x2008 ..=PPU_REGISTERS_MIRRORS_END =>{
@@ -134,11 +182,42 @@ impl Mem for Bus<'_>{
             0x2005 => self.ppu.write_to_scroll(data),
             0x2006 => self.ppu.write_to_ppu_addr(data),
             0x2007 => self.ppu.write_to_data(data),
+            // apu
+            // pulse
+            0x4000 => self.apu.pulse1.write_to_ctrl(data),
+            0x4001 => self.apu.pulse1.write_to_sweep(data),
+            0x4002 => self.apu.pulse1.write_to_timer_low(data),
+            0x4003 => self.apu.pulse1.write_to_timer_high(data),
+            0x4004 => self.apu.pulse2.write_to_ctrl(data),
+            0x4005 => self.apu.pulse2.write_to_sweep(data),
+            0x4006 => self.apu.pulse2.write_to_timer_low(data),
+            0x4007 => self.apu.pulse2.write_to_timer_high(data),
+            // triangle
+            0x4008 => self.apu.triangle.write_to_linear(data),
+            0x4009 => {
+                // unused
+            }
+            0x400A => self.apu.triangle.write_to_timer_low(data),
+            0x400B => self.apu.triangle.write_to_timer_high(data),
+            // noise
+            0x400C => self.apu.noise.write_to_ctrl(data),
+            0x400D => {
+                // unused
+            }
+            0x400E => self.apu.noise.write_to_period(data),
+            0x400F => self.apu.noise.write_to_length(data),
+            // dmc
+            0x4010 => self.apu.dmc.write_to_ctrl(data),
+            0x4011 => self.apu.dmc.write_to_dac(data),
+            0x4012 => self.apu.dmc.write_to_sample_addr(data),
+            0x4013 => self.apu.dmc.write_to_sample_length(data),
+            // status
+            0x4015 => self.apu.write_to_status(data),
             0x4016 =>{
                 self.joypad1.write(data);
             },
             0x4017 =>{
-                // ignore joypad2
+                self.apu.write_to_frame_counter(data);
             }
             0x4014 =>{
                 let mut buffer:[u8;256]=[0;256];

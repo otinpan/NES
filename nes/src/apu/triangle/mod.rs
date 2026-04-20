@@ -1,3 +1,5 @@
+// @trace-pilot a915cd462c3eae8b32992df74c878f74590c5ce6
+// APU Triangle
 use registers::linear_counter::LinearCounterRegister;
 use registers::timer_high::TimerHighRegister;
 

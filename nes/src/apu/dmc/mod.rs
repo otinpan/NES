@@ -86,6 +86,7 @@ impl DMCChannel{
 
         self.sample_counter-=1;
         
+        self.irq_flag=false;
         if self.sample_counter==0{
             if self.ctrl.is_loop(){
                 self.restart_sample();
