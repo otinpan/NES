@@ -1,0 +1,2 @@
+ pub triangle: TriangleChannel,
+    pub noise: NoiseChannel,
