@@ -1,0 +1,2 @@
+ pub status: StatusRegister,
+    pub frame_counter: FrameCounterRegister,
