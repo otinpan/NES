@@ -1,0 +1,44 @@
+目的
+- 既存の NesAPU 実装で壊れている frame counter を「cycleベース」で正しく動作させること。
+
+重要制約・方針
+- clock_frame_counter() は毎CPUサイクル呼んでよいが、実際の処理は特定のCPUサイクルでのみ行う（イベント閾値方式）。
+- frame_step（ステップを毎CPU進める方式）はやめる。cycleカウントで制御する。
+- IRQフラグは一本化する：frame系は frame_interrupt、DMCは dmc.irq_flag にする。set_irq()/is_irq を廃止。
+- triangle は毎CPUサイクル進める。pulse/noise/DMC は2 CPUサイクルごとに進める。
+- $4015 読み出し（read_status）で frame IRQ をクリアする。
+
+主要決定・修正点（要約）
+- frame counter をステップ増分ではなく cycles 累積＋特定サイクル一致で処理する（NTSCタイミング）。
+- 4-step / 5-step モードでの発火サイクルと挙動を分ける（5-step はIRQ無し・ステップが1つ多い）。
+- get_irq() は self.dmc.irq_flag || self.frame_interrupt とする。
+- write_to_frame_counter() はデータ更新後に cycles をリセットし、5-step に切り替えたら即時 quarter+half を実行。irq_inhibit が立っていれば frame_interrupt をクリア。
+
+具体的な出力（提示されたコード/ロジック）
+- tick(&mut self, cycles: u8)
+  - 毎CPUサイクル self.cycles += 1、triangle.tick(1) を呼ぶ。
+  - self.cycles % 2 == 0 のとき pulse1/pulse2/noise.tick(1) と dmc.clock_sample() を呼ぶ。
+  - 毎ループで self.clock_frame_counter() を呼ぶ。
+
+- clock_frame_counter(&mut self)
+  - 4-step モード（例）: cycles == 3729 → quarter, 7457 → quarter+half, 11186 → quarter, 14915 → quarter+half + set frame_interrupt if not irq_inhibit, reset cycles.
+  - 5-step モード（例）: 3729, 7457, 11186, 14915(何もしない), 18641 → quarter+half, reset cycles（IRQは出さない）。
+
+- get_irq(&self) -> bool
+  - return self.dmc.irq_flag || self.frame_interrupt
+
+- read_status(&mut self) -> u8
+  - 長さカウンタや dmc サンプル状態をビットにセット。frame_interrupt と dmc.irq_flag を該当ビットに入れる。
+  - $4015 読み出しで self.frame_interrupt = false にしてクリア。
+
+- write_to_frame_counter(&mut self, data: u8)
+  - frame_counter.update(data); irq_inhibit の場合は frame_interrupt = false; cycles = 0; five_step_mode に切り替えたら即時 clock_quarter_frame() と clock_half_frame() を実行。
+
+推奨する構造体整理
+- NesAPU フィールド例:
+  - pulse1, pulse2, triangle, noise, dmc, status, frame_counter, frame_interrupt: bool, cycles: usize
+- frame_step/is_irq/dmc_interrupt を削除し、IRQは frame_interrupt（frame系）と dmc.irq_flag（DMC系）で扱う。
+
+備考
+- 提示コードは NTSC 用のサイクル値（3729, 7457, 11186, 14915, 18641）に基づく実装例。
+- 必要なら、提示された修正版をそのまま置き換えられる完全版の mod.rs を作成可能。
