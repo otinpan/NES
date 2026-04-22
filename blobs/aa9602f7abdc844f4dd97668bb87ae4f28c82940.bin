@@ -1,0 +1,17 @@
+===================================================================
+--- main.rs (before)	snapshot
++++ main.rs (after)	idle
+@@ -106,5 +106,10 @@
+ }
+ 
+ 
+ // @trace-pilot 5e34ceef0ba0f09b660dca03c51b931d95c21ed1
+-// cycles: usize,
+\ No newline at end of file
++// cycles: usize,
++
++fn add(a: u8, b: u8) -> (u8, bool) {
++    let (result, carry) = a.overflowing_add(b);
++    (result, carry)
++}
+\ No newline at end of file
